@@ -11,4 +11,5 @@ CZ Wordle - hádání pětimístních, českých slov v příkazovém řádku.
 
 Původní cz_words.txt databáze českých podstatných jmen stažena z [https://pastebin.com/7uPetKWh]. Upraveno pomocí příkazu: 
 > grep -o -w "^\w\{5\}" cz_words.txt >> cz_words_5.txt
+
 Dále upraveno v LibreOffice Calc do podoby slovníku pro python a uloženo v slova5.py
