@@ -11,8 +11,7 @@ import sys, os, random, threading           # zakladni knihovna, knihovna operac
 from pick import pick                       # rozhodovaci menu (https://github.com/wong2/pick), pip install pick
 import numpy as np                          # knihovna s 2d polem, pip install numpy
 from termcolor import colored, cprint       # ANSII Color formatting for output in terminal, pip install termcolor
-from pynput.keyboard import Key, Listener   # cteni stiknutych klaves z klavesnice, pip install pynput
-from pynput import keyboard                 # cteni stiknutych klaves z klavesnice, pip install pynput
+from pynput.keyboard import Listener, Key   # cteni stiknutych klaves z klavesnice, pip install pynput
 
 # nacteni vlastni knihovny 5 mistnich ceskych slov
 import slova5 # promenna words5
@@ -137,8 +136,11 @@ def inflection(score):
 def start():
     global score
 
-    print('--------------')
+    print('[Delete] = konec hry')
+    print(colored('Žluté písmeno  = nachází se někde ve slově','yellow'))
+    print(colored('Zelené písmeno = nachází se v přesné pozici slova','green'))
     print('Celkové skóre: ' + str(score) + ' ' + inflection(score) + '\n')
+    print('Hádej pětimístné\nčeské slovo:\n')
     
     gf = GameField(7,5)
     gf.colorChangeRow('actual_row', 2)
@@ -148,30 +150,29 @@ def start():
 
     print(gf.listingGameField())
 
-def onPress(key):
-    try:
-        print('alphanumeric key {0} pressed'.format(key.char))
-    except AttributeError:
-        if (key == Key.space):
-            pass
-        if (key == Key.enter):
-            pass
-        if (key == Key.esc):
-            exit()
-
-def pressKey():
-    with Listener(on_press=onPress) as listener:
-        listener.join()
+def on_press(key):
+    if (hasattr(key, 'char')):
+        pass # bezne klavesy
+    elif key == Key.enter:
+        pass # enter
+    elif key == Key.backspace:
+        pass # backspace
+    elif key == Key.space:
+        pass # space
+    elif key == Key.delete:
+        # stop listener
+        return False
+    else:
+        pass #key.name
 
 # Main
 if __name__ == "__main__":
 
-    thread = threading.Thread(target=pressKey, args=())
-
     option, index = pick(options, title, indicator = '->')
     if (index == 0):
         start()
-        thread.start()
+        with Listener(on_press=on_press, suppress=True) as listener:
+            listener.join()
     if (index == 1):
         exit()
     
