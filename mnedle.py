@@ -153,14 +153,11 @@ def clear():
         _ = system('clear')
 
 def introductory_text():
-    print('\nklávesa delete = konec hry')
-    print(colored('žluté písmeno  = nachází se někde ve slově .. +1 bod','yellow'))
-    print(colored('zelené písmeno = nachází se v přesné pozici slova .. +2 body','green'))
-    print('\nhádej pětimístné české slovo\nv maximálně pěti pokusech:\n')
-
-def printPlayListing():
-    global gf
-    return print(gf.listingGameField())
+    txt  = '\nklávesa delete = konec hry\n'
+    txt += colored('žluté písmeno  = nachází se někde ve slově .. +1 bod','yellow') + '\n'
+    txt += colored('zelené písmeno = nachází se v přesné pozici slova .. +2 body','green') + '\n'
+    txt += '\nhádej pětimístné české slovo\nv maximálně pěti pokusech:\n'
+    return txt
 
 def play(ch):
     
@@ -180,8 +177,7 @@ def play(ch):
             #TODO zde probehne kontrola outputu
 
     clear()
-    introductory_text()
-    printPlayListing()
+    print(introductory_text() + gf.listingGameField(), end='\r', flush=True)
 
 def playBackspace():
 
@@ -197,10 +193,8 @@ def playBackspace():
         gf.valueChangeCell(gf.defaultChar, gf.actualpos[0], gf.actualpos[1])
         gf.actualpos[1] -= 1
     
-
     clear()
-    introductory_text()
-    printPlayListing()
+    print(introductory_text() + gf.listingGameField(), end='\r', flush=True)
     
 def playEnter():
 
