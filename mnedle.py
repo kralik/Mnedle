@@ -8,7 +8,6 @@
 # City, Country: Pilsen, Czechia
 
 import sys, os, random, threading           # zakladni knihovna, knihovna operacniho systemu, knihovna pro nahodnost, knihovna pro vlakna
-from os import system, name                 # vymaz console
 from pick import pick                       # rozhodovaci menu (https://github.com/wong2/pick), pip install pick
 import numpy as np                          # knihovna s 2d polem, pip install numpy
 from termcolor import colored, cprint       # ANSII Color formatting for output in terminal, pip install termcolor
@@ -38,6 +37,23 @@ def print_logo():
 options = ['Hraj', 'Konec']
 title = print_logo()
 
+def introductory_text():
+    txt  = '\nklávesa delete = konec hry\n'
+    txt += colored('žluté písmeno  = nachází se někde ve slově .. +1 bod','yellow') + '\n'
+    txt += colored('zelené písmeno = nachází se v přesné pozici slova .. +2 body','green') + '\n'
+    txt += '\nhádej pětimístné české slovo\nv maximálně pěti pokusech:\n'
+    return txt
+
+# sklonovani slova bod
+def inflection(score):
+    switcher = {
+        1: '',
+        2: 'y',
+        3: 'y',
+        4: 'y'
+    }
+    return 'bod' + str(switcher.get(abs(score), 'ů'))
+
 # 2D hraci pole
 class GameField(object):
     
@@ -53,6 +69,7 @@ class GameField(object):
     word = ''
     actualpos = [0,0]
     border = 0
+    scoretxt = 'Celkové skóre: ' + str(score) + ' ' + inflection(score)
 
     # barvicky - color name
     cn = {
@@ -116,8 +133,7 @@ class GameField(object):
 
     def listingGameField(self):
         
-        #view = ''
-        view = 'slovo: ' + self.word + ', output: ' + output + ', pozice [' + str(self.actualpos[0]) + ',' + str(self.actualpos[1]) + '], border: ' + str(self.border) + '\n\n'
+        view = ''
         
         for r in range(0, len(self.matrix)):
             row = ''
@@ -131,33 +147,33 @@ class GameField(object):
                 row += self.colorColored(prefix + self.matrix[r,i] + suffix, r, i)
             view += row + '\n'
         
-        return view + '\nCelkové skóre: ' + str(score) + ' ' + inflection(score) + '\n'
+        return view
 
+    def listingGameActualRow(self, r):
 
-# sklonovani slova bod
-def inflection(score):
-    switcher = {
-        1: '',
-        2: 'y',
-        3: 'y',
-        4: 'y'
-    }
-    return 'bod' + str(switcher.get(abs(score), 'ů'))
+        self.r = r
+        row = ''
 
-def clear():
-    # windows
-    if name == 'nt':
-        _ = system('cls')
-    # mac, linux
-    else:
-        _ = system('clear')
+        for i in range(0, len(self.matrix[self.r])):
+            prefix = suffix = ''
+            if (i == 0):
+                prefix = ''
+                suffix = self.colon
+            else:
+                prefix = suffix = self.gapChar
+            row += self.colorColored(prefix + self.matrix[self.r,i] + suffix, self.r, i)
+        
+        return row
 
-def introductory_text():
-    txt  = '\nklávesa delete = konec hry\n'
-    txt += colored('žluté písmeno  = nachází se někde ve slově .. +1 bod','yellow') + '\n'
-    txt += colored('zelené písmeno = nachází se v přesné pozici slova .. +2 body','green') + '\n'
-    txt += '\nhádej pětimístné české slovo\nv maximálně pěti pokusech:\n'
-    return txt
+    def searchWord(self, w):
+        bl = False
+        if w in slova5.words5.items():
+            bl = True
+        else:
+            bl = False
+        
+        return bl
+
 
 def play(ch):
     
@@ -174,10 +190,10 @@ def play(ch):
         if (gf.actualpos[1] == gf.border):
             # na psoledni pozici hadaneho slova
             gf.valueChangeCell("Stiskni enter pro vyhodnocení", gf.actualpos[0], int(gf.border+1))
-            #TODO zde probehne kontrola outputu
+            gf.colorChangeCell('actual_row', gf.actualpos[0], int(gf.border+1))
+            
 
-    clear()
-    print(introductory_text() + gf.listingGameField(), end='\r', flush=True)
+    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
 def playBackspace():
 
@@ -187,24 +203,44 @@ def playBackspace():
     output = output[:-1]
     lenput = len(output)
 
-    gf.valueChangeCell(gf.gapChar, gf.actualpos[0], 6)
+    gf.valueChangeCell(gf.gapChar*100, gf.actualpos[0], 6)
 
     if (lenput >= 0 and gf.actualpos[1] > 0):
         gf.valueChangeCell(gf.defaultChar, gf.actualpos[0], gf.actualpos[1])
         gf.actualpos[1] -= 1
     
-    clear()
-    print(introductory_text() + gf.listingGameField(), end='\r', flush=True)
+    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
     
 def playEnter():
 
     global gf
     global output
 
+    lenput = len(output)
+
+    if (lenput == gf.border):
+        # spravna delka test slova
+        if (gf.searchWord(output)):
+            # slovo existuje v seznamu
+            gf.valueChangeCell('Body' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
+            gf.colorChangeCell('correct', gf.actualpos[0], int(gf.border+1))
+            print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+        else:
+            gf.valueChangeCell('Takové slovo neexistuje' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
+            gf.colorChangeCell('bad_input', gf.actualpos[0], int(gf.border+1))
+            print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+    else:
+        gf.valueChangeCell('Slovo nemá požadovanou délku' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
+        gf.colorChangeCell('bad_input', gf.actualpos[0], int(gf.border+1))
+        print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+
+
+    """
     output = '';
     gf.actualpos[0] += 1
     gf.actualpos[1] = 0
     gf.colorChangeRow('actual_row', gf.actualpos[0])
+    """
 
 
 
@@ -212,12 +248,11 @@ def start():
 
     global gf
 
-    # vytvoreni hraciho pole 5x5 (resp. 7x5 s popiskama na 0 sloupci a poslednim sloupci), pet pokusu petimistnych slov
+    # vytvoreni hraciho pole 5x5 (resp. 7x5 s popiskama na 0 sloupci a poslednim sloupci)
     gf = GameField(int(5+2),int(5))
     gf.colorChangeRow('actual_row', 0)
-    
-    #gf.colorChangeCell('bad_input', 1, 4)
-    #gf.valueChangeCell(gf.badChar, 1, 4)
+
+    print(introductory_text())
 
     play('')
 
@@ -228,7 +263,8 @@ def on_press(key):
         # bezne klavesy
         play(key.char)
     elif key == Key.enter:
-        pass # enter
+        # enter
+        playEnter()
     elif key == Key.backspace:
         # backspace
         playBackspace()
