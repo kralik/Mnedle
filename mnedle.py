@@ -54,6 +54,11 @@ def inflection(score):
     }
     return 'bod' + str(switcher.get(abs(score), 'ů'))
 
+def plusScore(s):
+    global score
+    score = score + s
+    return int(score)
+
 # 2D hraci pole
 class GameField(object):
     
@@ -69,12 +74,11 @@ class GameField(object):
     word = ''
     actualpos = [0,0]
     border = 0
-    scoretxt = 'Celkové skóre: ' + str(score) + ' ' + inflection(score)
 
     # barvicky - color name
     cn = {
         'default': 'blue',
-        'correct': 'gray',
+        'correct': 'white',
         'bad_input': 'red',
         'actual_row': 'cyan',
         'with_pos': 'green',
@@ -167,12 +171,49 @@ class GameField(object):
 
     def searchWord(self, w):
         bl = False
-        if w in slova5.words5.items():
+        self.w = w
+        if self.w in slova5.words5.values():
             bl = True
         else:
             bl = False
-        
         return bl
+
+    def infoReportRow(self, txt, color):
+        
+        self.txt = txt
+        self.color = color
+        
+        gf.valueChangeCell(self.txt + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
+        gf.colorChangeCell(self.color, gf.actualpos[0], int(gf.border+1))
+
+    def listingScore(self):
+        return 'Skóre: ' + str(score) + ' ' + inflection(score)
+
+    def evaluation(self, eword, row):
+        
+        self.eword = eword
+        self.row = row
+        subscore = [0,0,0,0,0]
+
+        for char in self.eword:
+            
+            i = self.eword.index(char)
+
+            # defaultni zbarveni vyhodnoceneho slova
+            gf.colorChangeCell('correct', self.row, i)
+
+            if char in self.word:
+                # nachazi se znak ve slove
+                subscore[i] = 1
+                gf.colorChangeCell('without_pos', self.row, i)
+            
+            if char == self.word[i]:
+                # nachazi se znak na presne pozici
+                subscore[i] = 2
+                gf.colorChangeCell('with_pos', self.row, i)
+        
+        return sum(subscore)
+
 
 
 def play(ch):
@@ -189,10 +230,8 @@ def play(ch):
     
         if (gf.actualpos[1] == gf.border):
             # na psoledni pozici hadaneho slova
-            gf.valueChangeCell("Stiskni enter pro vyhodnocení", gf.actualpos[0], int(gf.border+1))
-            gf.colorChangeCell('actual_row', gf.actualpos[0], int(gf.border+1))
+            gf.infoReportRow('Stiskni enter pro vyhodnocení','actual_row')
             
-
     print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
 def playBackspace():
@@ -215,6 +254,7 @@ def playEnter():
 
     global gf
     global output
+    global score
 
     lenput = len(output)
 
@@ -222,17 +262,18 @@ def playEnter():
         # spravna delka test slova
         if (gf.searchWord(output)):
             # slovo existuje v seznamu
-            gf.valueChangeCell('Body' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
-            gf.colorChangeCell('correct', gf.actualpos[0], int(gf.border+1))
-            print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+            plusScore(gf.evaluation(output, gf.actualpos[0]))
+            gf.infoReportRow(gf.listingScore(), 'correct')
         else:
-            gf.valueChangeCell('Takové slovo neexistuje' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
-            gf.colorChangeCell('bad_input', gf.actualpos[0], int(gf.border+1))
-            print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+            # slovo neexistuje v seznamu
+            plusScore(-4)
+            gf.infoReportRow('Takové slovo neexistuje, -4 ' + inflectio(-4), 'bad_input')
+        
     else:
-        gf.valueChangeCell('Slovo nemá požadovanou délku' + gf.gapChar*100, gf.actualpos[0], int(gf.border+1))
-        gf.colorChangeCell('bad_input', gf.actualpos[0], int(gf.border+1))
-        print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+        # test slovo nema pozadovanou delku
+        gf.infoReportRow('Slovo nemá požadovanou délku', 'bad_input')
+    
+    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
 
     """
