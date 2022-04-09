@@ -18,6 +18,7 @@ import slova5                               # nacteni vlastni knihovny 5 mistnic
 
 score = 0                                   # globalni promenna, celkovy pocet dosazenych bodu
 gf = None                                   # globalni promenna pro objekt GameField hraciho pole
+history = ''                                # globalni promenna pro ukladani predeslych radku
 output = ''                                 # globalni promenna pro ulozeni vystupu z klavesnice
 
 def print_logo():
@@ -38,10 +39,10 @@ options = ['Hraj', 'Konec']
 title = print_logo()
 
 def introductory_text():
-    txt  = '\nklávesa delete = konec hry\n'
+    txt  = '\nklávesa delete = konec hry, CH se bere jako dvoupísmenné\n'
     txt += colored('žluté písmeno  = nachází se někde ve slově .. +1 bod','yellow') + '\n'
     txt += colored('zelené písmeno = nachází se v přesné pozici slova .. +2 body','green') + '\n'
-    txt += '\nhádej pětimístné české slovo\nv maximálně pěti pokusech:\n'
+    txt += '\nhádej pětimístné české slovo\nv maximálně pěti pokusech:'
     return txt
 
 # sklonovani slova bod
@@ -167,12 +168,13 @@ class GameField(object):
                 prefix = suffix = self.gapChar
             row += self.colorColored(prefix + self.matrix[self.r,i] + suffix, self.r, i)
         
-        return row
+        #return row
+        return self.word + ', [' + str(self.actualpos[0]) + ',' + str(self.actualpos[1]) + '] ' +  row
 
-    def searchWord(self, w):
+    def searchWord(self):
         bl = False
-        self.w = w
-        if self.w in slova5.words5.values():
+        global output
+        if output in slova5.words5.values():
             bl = True
         else:
             bl = False
@@ -189,32 +191,55 @@ class GameField(object):
     def listingScore(self):
         return 'Skóre: ' + str(score) + ' ' + inflection(score)
 
-    def evaluation(self, eword, row):
+    def evaluation(self, row):
         
-        self.eword = eword
+        global output
+        global gf
         self.row = row
         subscore = [0,0,0,0,0]
 
-        for char in self.eword:
-            
-            i = self.eword.index(char)
+        i = 0
+
+        for char in output:
 
             # defaultni zbarveni vyhodnoceneho slova
-            gf.colorChangeCell('correct', self.row, int(i+1))
+            gf.colorChangeCell('correct', self.row, i+1)
 
             if char in self.word:
                 # nachazi se znak ve slove
                 subscore[i] = 1
-                gf.colorChangeCell('without_pos', self.row, int(i+1))
+                gf.colorChangeCell('without_pos', self.row, i+1)
             
             if char == self.word[i]:
                 # nachazi se znak na presne pozici
                 subscore[i] = 2
-                gf.colorChangeCell('with_pos', self.row, int(i+1))
-        
+                gf.colorChangeCell('with_pos', self.row, i+1)
+
+            i += 1
+
         return sum(subscore)
 
+    def done(self, row):
+        
+        self.row = row+1
 
+        rscore = {
+            1: 100,
+            2: 50,
+            3: 30,
+            4: 25,
+            5: 20
+        }
+
+        return int(rscore.get(self.row, 0))
+
+
+
+
+
+def printFlush():
+    global gf
+    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
 def play(ch):
     
@@ -232,7 +257,7 @@ def play(ch):
             # na psoledni pozici hadaneho slova
             gf.infoReportRow('Stiskni enter pro vyhodnocení','actual_row')
             
-    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+    printFlush()
 
 def playBackspace():
 
@@ -248,52 +273,83 @@ def playBackspace():
         gf.valueChangeCell(gf.defaultChar, gf.actualpos[0], gf.actualpos[1])
         gf.actualpos[1] -= 1
     
-    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
+    printFlush()
     
 def playEnter():
 
     global gf
     global output
     global score
+    global history
 
     lenput = len(output)
+    done = False
 
     if (lenput == gf.border):
         # spravna delka test slova
-        if (gf.searchWord(output)):
+        if (gf.searchWord()):
             # slovo existuje v seznamu
-            plusScore(gf.evaluation(output, gf.actualpos[0]))
-            gf.infoReportRow(gf.listingScore(), 'correct')
+            if (output == gf.word):
+                # slovo se rovna hledanemu
+                plusScore(gf.done(gf.actualpos[0]))
+                gf.infoReportRow('!!! UHODLS !!! ' + gf.listingScore(), 'correct')
+                done = True
+            else:
+                # slovo se nerovna hledanemu
+                plusScore(gf.evaluation(gf.actualpos[0]))
+                gf.infoReportRow(gf.listingScore(), 'correct')
         else:
             # slovo neexistuje v seznamu
             plusScore(-4)
-            gf.infoReportRow('Takové slovo neexistuje, -4 ' + inflectio(-4), 'bad_input')
+            gf.infoReportRow('Takové slovo neexistuje, -4 ' + inflection(-4), 'bad_input')
         
     else:
         # test slovo nema pozadovanou delku
         gf.infoReportRow('Slovo nemá požadovanou délku', 'bad_input')
-    
-    print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
     if (lenput == gf.border):
         # jiz vyhodnoceno, prechod na dalsi slovo
+        history = gf.listingGameActualRow(gf.actualpos[0])
+        
         output = '';
-        gf.actualpos[0] += 1
-        gf.actualpos[1] = 0
-        gf.colorChangeRow('actual_row', gf.actualpos[0])
-        play('')
+        
+        if (gf.actualpos[0] < gf.border):
+            gf.actualpos[0] += 1
+            gf.actualpos[1] = 0
+        
+            gf.colorChangeRow('actual_row', gf.actualpos[0])
+            play('')
+        
+        if (done):
+            # uhodnuto
+            history += '\nPokračuj v hádání:'
+        
+        if not done and gf.actualpos[0] == gf.border:
+            # neuhodnuto a zaroven na psoledni moznosti
+            plusScore(-15)
+            history += '\nNeuhodls, -15 bodů, slovo bylo ' + gf.word + ', ' + gf.gapChar + gf.listingScore()
+            start()
+        
+        print(history)
+    
+    if (done):
+        start()
+    else:
+        printFlush()
 
 
 
 def start():
 
     global gf
+    global history
 
     # vytvoreni hraciho pole 5x5 (resp. 7x5 s popiskama na 0 sloupci a poslednim sloupci)
     gf = GameField(int(5+2),int(5))
     gf.colorChangeRow('actual_row', 0)
 
     print(introductory_text())
+    print(history)
 
     play('')
 
