@@ -200,17 +200,17 @@ class GameField(object):
             i = self.eword.index(char)
 
             # defaultni zbarveni vyhodnoceneho slova
-            gf.colorChangeCell('correct', self.row, i)
+            gf.colorChangeCell('correct', self.row, int(i+1))
 
             if char in self.word:
                 # nachazi se znak ve slove
                 subscore[i] = 1
-                gf.colorChangeCell('without_pos', self.row, i)
+                gf.colorChangeCell('without_pos', self.row, int(i+1))
             
             if char == self.word[i]:
                 # nachazi se znak na presne pozici
                 subscore[i] = 2
-                gf.colorChangeCell('with_pos', self.row, i)
+                gf.colorChangeCell('with_pos', self.row, int(i+1))
         
         return sum(subscore)
 
@@ -275,13 +275,13 @@ def playEnter():
     
     print(gf.listingGameActualRow(gf.actualpos[0]), end='\r', flush=True)
 
-
-    """
-    output = '';
-    gf.actualpos[0] += 1
-    gf.actualpos[1] = 0
-    gf.colorChangeRow('actual_row', gf.actualpos[0])
-    """
+    if (lenput == gf.border):
+        # jiz vyhodnoceno, prechod na dalsi slovo
+        output = '';
+        gf.actualpos[0] += 1
+        gf.actualpos[1] = 0
+        gf.colorChangeRow('actual_row', gf.actualpos[0])
+        play('')
 
 
 
