@@ -3,6 +3,7 @@
 # Mnedle: CZ Wordle
 # Date: 2022/04/03
 # Author: Martin Vodráška
+# E-mail: mvodraska@seznam.cz
 # Student: AIK2 (2020)
 # School: (https://www.vosplzen.cz/)
 # City, Country: Pilsen, Czechia
@@ -29,9 +30,8 @@ def print_logo():
     logo +='██║ ╚═╝ ██║██║ ╚████║███████╗██████╔╝███████╗███████╗\n'
     logo +='╚═╝     ╚═╝╚═╝  ╚═══╝╚══════╝╚═════╝ ╚══════╝╚══════╝\n'
     logo +='         CZ Wordle - hádej pětimístné slovo          \n'
-    logo +='         (https://github.com/kralik/Mnedle)          \n'
     logo +='       Dobrovolná podpora (Donation), BTC (₿):       \n'
-    logo +=''
+    logo +='      bc1qy8cflws9zufqcty7f6hpewnywty3uwcaugy6vc     '
     return logo
 
 # menu moznosti
@@ -93,7 +93,7 @@ class GameField(object):
 
         self.border = self.w-2
 
-        self.word = random.choice(list(slova5.words5.items()))[1]
+        self.word = random.choice(list(slova5.words5.items()))[1].lower()
 
         self.matrix = np.array([[self.defaultChar]*self.w]*self.h, dtype='<U100')
         self.colors = np.array([[self.cn['default']]*self.w]*self.h, dtype='<U100')
@@ -168,8 +168,8 @@ class GameField(object):
                 prefix = suffix = self.gapChar
             row += self.colorColored(prefix + self.matrix[self.r,i] + suffix, self.r, i)
         
-        #return row
-        return self.word + ', [' + str(self.actualpos[0]) + ',' + str(self.actualpos[1]) + '] ' +  row
+        return row
+        #return self.word + ', [' + str(self.actualpos[0]) + ',' + str(self.actualpos[1]) + '] ' +  row
 
     def searchWord(self):
         bl = False
@@ -313,7 +313,13 @@ def playEnter():
         
         output = '';
         
-        if (gf.actualpos[0] < gf.border):
+        if (not done and gf.actualpos[0] == gf.border-1):
+            # neuhodnuto a zaroven na posledni moznosti
+            plusScore(-15)
+            history += '\nNeuhodls, -15 bodů, slovo bylo ' + gf.word + ', ' + gf.gapChar + gf.listingScore()
+            done = True
+
+        if (gf.actualpos[0] < gf.border-1):
             gf.actualpos[0] += 1
             gf.actualpos[1] = 0
         
@@ -322,17 +328,15 @@ def playEnter():
         
         if (done):
             # uhodnuto
-            history += '\nPokračuj v hádání:'
-        
-        if not done and gf.actualpos[0] == gf.border:
-            # neuhodnuto a zaroven na psoledni moznosti
-            plusScore(-15)
-            history += '\nNeuhodls, -15 bodů, slovo bylo ' + gf.word + ', ' + gf.gapChar + gf.listingScore()
-            start()
+            history += '\nPokračuj ...'
         
         print(history)
     
     if (done):
+        history = ''
+        gf.actualpos[0] = 0
+        gf.actualpos[1] = 0
+        gf = None
         start()
     else:
         printFlush()
@@ -355,7 +359,7 @@ def start():
 
 
 def on_press(key):
-    global gf;
+    global gf
     if (hasattr(key, 'char')):
         # bezne klavesy
         play(key.char)
@@ -365,8 +369,6 @@ def on_press(key):
     elif key == Key.backspace:
         # backspace
         playBackspace()
-    elif key == Key.space:
-        pass # space
     elif key == Key.delete:
         # stop listener
         return False
@@ -378,7 +380,7 @@ if __name__ == "__main__":
 
     option, index = pick(options, title, indicator = '->')
     if (index == 0):
-        introductory_text()
+        #introductory_text()
         start()
         with Listener(on_press=on_press, suppress=True) as listener:
             listener.join()
